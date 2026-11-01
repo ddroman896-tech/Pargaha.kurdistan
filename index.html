@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="kmr" dir="rtl" class="dark">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>پەرگەها کوردستان - POS &amp; Inventory System with Barcode Scanner</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="js/tailwind-config.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Html5-Qrcode Library for Camera Barcode Scanning -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+ </head>
+ <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col md:flex-row overflow-x-hidden antialiased selection:bg-brand-500 selection:text-white">
+  <!-- SIDEBAR NAVIGATION -->
+  <aside class="w-full md:w-64 bg-slate-950 border-b md:border-b-0 md:border-l border-slate-800 flex-shrink-0 flex flex-col justify-between z-20">
+   <div>
+    <!-- Store Branding Header -->
+    <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+     <div class="flex items-center space-x-3 space-x-reverse">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/20 font-bold text-xl">پ</div>
+      <div>
+       <h1 class="font-extrabold text-lg text-white leading-tight">پەرگەها کوردستان</h1>
+       <p class="text-xs text-slate-400">نظام المبيعات والجرد الصوتي</p>
+      </div>
+     </div>
+     <!-- Theme Toggle Button -->
+     <button onclick="toggleDarkMode()" class="text-slate-400 hover:text-amber-400 transition p-2 rounded-lg bg-slate-900"><i class="fa-solid fa-moon text-lg" id="theme-icon"></i></button>
+    </div>
+    <!-- Navigation Links -->
+    <nav class="p-4 space-y-1.5">
+     <button onclick="switchTab('pos')" id="nav-pos" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium"><i class="fa-solid fa-cash-register text-lg text-brand-500 w-6"></i> <span>نقطة البيع (POS)</span></button>
+     <button onclick="switchTab('inventory')" id="nav-inventory" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium"><i class="fa-solid fa-boxes-stacked text-lg text-amber-500 w-6"></i> <span>إدارة المخزون</span></button>
+     <button onclick="switchTab('services')" id="nav-services" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium"><i class="fa-solid fa-print text-lg text-emerald-500 w-6"></i> <span>خدمات وسحوبات FIB</span></button>
+     <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium"><i class="fa-solid fa-chart-pie text-lg text-sky-500 w-6"></i> <span>لوحة التقارير</span></button>
+    </nav>
+   </div>
+   <!-- Store Quick Info & Status -->
+   <div class="p-4 m-3 rounded-2xl bg-slate-900 border border-slate-800/80 text-xs text-slate-400 space-y-2">
+    <div class="flex justify-between items-center">
+     <span>المؤثرات الصوتية:</span> <span id="sidebar-audio-status" class="inline-flex items-center text-emerald-400 font-semibold"> <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse ml-1.5"></span> مفعلة </span>
+    </div>
+    <div class="flex justify-between items-center">
+     <span>العملة:</span> <span class="text-slate-200 font-bold">د.ع (IQD)</span>
+    </div>
+   </div>
+  </aside>
+  <!-- MAIN CONTENT AREA -->
+  <main class="flex-1 flex flex-col min-h-0 overflow-y-auto bg-slate-900/50">
+   <!-- Header / Controls Bar -->
+   <header class="h-16 border-b border-slate-800/80 px-6 flex items-center justify-between bg-slate-950/60 backdrop-blur-md sticky top-0 z-10">
+    <div class="flex items-center space-x-3 space-x-reverse">
+     <span id="page-title" class="text-xl font-bold text-white">نقطة البيع الكاشير</span>
+    </div>
+    <div class="flex items-center space-x-3 space-x-reverse">
+     <!-- Audio Settings Button -->
+     <button onclick="openAudioSettingsModal()" class="text-xs bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 px-3 py-1.5 rounded-lg transition border border-brand-500/20 flex items-center gap-1.5 font-bold"><i class="fa-solid fa-volume-high text-sm"></i> <span>إعدادات الصوت</span></button>
+     <!-- Time Widget -->
+     <div id="live-clock" class="text-xs font-mono bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800 text-slate-300">--:--:--</div>
+     <!-- Save Data Button -->
+     <button onclick="saveAllData()" title="حفظ البيانات" class="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-lg transition border border-emerald-500/20 flex items-center gap-1.5 font-bold"><i class="fa-solid fa-floppy-disk"></i> <span class="hidden sm:inline">حفظ البيانات</span></button>
+     <!-- Quick Reset Data Button -->
+     <button onclick="confirmResetData()" title="إعادة ضبط البيانات الافتراضية" class="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg transition border border-red-500/20 flex items-center gap-1.5"><i class="fa-solid fa-rotate-left"></i> <span class="hidden sm:inline">تهيئة البيانات</span></button>
+    </div>
+   </header>
+   <!-- Dynamic Content Sections -->
+   <div class="p-4 md:p-6 flex-1">
+    <!-- 1. POS CHECKOUT SECTION -->
+    <section id="sec-pos" class="h-full flex flex-col lg:flex-row gap-6">
+     <!-- Left Side: Product Selector Grid & Search -->
+     <div class="flex-1 flex flex-col gap-4">
+      <!-- Search & Scanner Controls -->
+      <div class="flex gap-2">
+       <div class="relative flex-1">
+        <i class="fa-solid fa-barcode absolute right-3.5 top-3.5 text-slate-500"></i> <input type="text" id="pos-search" oninput="filterPOSProducts()" placeholder="ابحث باسم المنتج، القسم، أو امسح الباركود..." class="w-full pl-4 pr-10 py-3 rounded-xl bg-slate-950 border border-slate-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none text-slate-100 placeholder-slate-500 transition">
+       </div>
+       <button onclick="openCameraScanner('pos')" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-brand-400 rounded-xl transition border border-slate-700 flex items-center gap-2 font-medium" title="مسح باستخدام كاميرا الهاتف"><i class="fa-solid fa-camera text-lg"></i> <span class="hidden sm:inline">كاميرا</span></button>
+      </div>
+      <!-- Category Pills Filter -->
+      <div class="flex items-center space-x-2 space-x-reverse overflow-x-auto pb-1 text-sm scrollbar-none" id="category-pills">
+       <!-- Rendered Javascript -->
+      </div>
+      <!-- Product Grid -->
+      <div id="pos-product-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 overflow-y-auto max-h-[calc(100vh-230px)] p-1">
+       <!-- Rendered Javascript -->
+      </div>
+     </div>
+     <!-- Right Side: Active Cart & Checkout Panel -->
+     <div class="w-full lg:w-96 bg-slate-950 rounded-2xl border border-slate-800 p-4 flex flex-col justify-between shadow-2xl">
+      <div>
+       <!-- Cart Header -->
+       <div class="flex justify-between items-center pb-3 mb-3 border-b border-slate-800">
+        <h2 class="font-bold text-lg flex items-center gap-2"><i class="fa-solid fa-cart-shopping text-brand-500"></i> السلة الحالية</h2>
+        <button onclick="clearCart()" class="text-xs text-red-400 hover:text-red-300 transition bg-red-500/10 px-2.5 py-1 rounded-md">تفريغ السلة</button>
+       </div>
+       <!-- Cart Items List -->
+       <div id="cart-items" class="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+        <!-- Rendered JS -->
+       </div>
+      </div>
+      <!-- Cart Summary & Calculation -->
+      <div class="pt-4 border-t border-slate-800 mt-4 space-y-3">
+       <div class="flex justify-between text-sm text-slate-400">
+        <span>المجموع الفرعي:</span> <span id="cart-subtotal" class="font-semibold text-slate-200">0 د.ع</span>
+       </div>
+       <div class="flex justify-between items-center text-sm">
+        <span class="text-slate-400">خصم إضافي:</span>
+        <div class="flex items-center gap-1 w-28">
+         <input type="number" id="cart-discount" value="0" min="0" onchange="renderCart()" onkeyup="renderCart()" class="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-center text-amber-400 font-bold focus:outline-none focus:border-amber-500 text-sm"> <span class="text-xs text-slate-500">د.ع</span>
+        </div>
+       </div>
+       <div class="flex justify-between items-center pt-2 border-t border-slate-800/80 text-lg font-bold">
+        <span class="text-white">المجموع النهائي:</span> <span id="cart-total" class="text-emerald-400 text-xl font-extrabold">0 د.ع</span>
+       </div>
+       <!-- Checkout Action Button -->
+       <button onclick="processCheckout()" class="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 active:scale-[0.99] transition flex items-center justify-center gap-2"><i class="fa-solid fa-circle-check text-lg"></i> إتمام عملية البيع وطباعة الفاتورة</button>
+      </div>
+     </div>
+    </section>
+    <!-- 2. INVENTORY MANAGEMENT SECTION -->
+    <section id="sec-inventory" class="hidden space-y-6">
+     <!-- Actions Bar -->
+     <div class="flex flex-col sm:flex-row justify-between gap-4 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+      <div class="relative flex-1 max-w-md">
+       <i class="fa-solid fa-magnifying-glass absolute right-3.5 top-3.5 text-slate-500"></i> <input type="text" id="inventory-search" oninput="renderInventoryTable()" placeholder="ابحث في المخزون بالاسم أو الباركود..." class="w-full pl-4 pr-10 py-2.5 rounded-xl bg-slate-900 border border-slate-800 focus:border-amber-500 outline-none text-slate-200">
+      </div>
+      <div class="flex flex-wrap gap-2">
+       <select id="inventory-filter-cat" onchange="renderInventoryTable()" class="bg-slate-900 border border-slate-800 text-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500"> <option value="ALL">جميع الأقسام</option> <option value="Stationery">قرطاسية</option> <option value="Accessories">إكسسوارات هواتف</option> <option value="Services">خدمات وطباعة</option> </select> <!-- Fast Add by Scanning Button -->
+       <button onclick="openProductModalByScan()" class="px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl transition flex items-center gap-2 shadow-lg shadow-amber-600/20"><i class="fa-solid fa-barcode"></i> <span>إضافة بالباركود</span></button>
+       <button onclick="openProductModal()" class="px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-xl transition flex items-center gap-2 shadow-lg shadow-brand-600/20"><i class="fa-solid fa-plus"></i> <span>إضافة منتج يدوي</span></button>
+      </div>
+     </div>
+     <!-- Products Table -->
+     <div class="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+      <div class="overflow-x-auto">
+       <table class="w-full text-right border-collapse">
+        <thead>
+         <tr class="bg-slate-900/80 text-slate-400 text-xs border-b border-slate-800">
+          <th class="p-4">الباروكود</th>
+          <th class="p-4">اسم المنتج / الخدمة</th>
+          <th class="p-4">القسم</th>
+          <th class="p-4">سعر البيع</th>
+          <th class="p-4">الكمية بالمخزن</th>
+          <th class="p-4 text-center">الإجراءات</th>
+         </tr>
+        </thead>
+        <tbody id="inventory-table-body" class="divide-y divide-slate-800/60 text-sm">
+         <!-- Rendered JS -->
+        </tbody>
+       </table>
+      </div>
+     </div>
+    </section>
+    <!-- 3. SERVICES & DIGITAL TRANSACTIONS SECTION -->
+    <section id="sec-services" class="hidden space-y-6">
+     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Photocopying & Printing Quick Recorder -->
+      <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
+       <div class="flex items-center space-x-3 space-x-reverse">
+        <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl">
+         <i class="fa-solid fa-copy text-2xl"></i>
+        </div>
+        <div>
+         <h3 class="font-bold text-lg text-white">تسجيل خدمات الاستنساخ والطباعة</h3>
+         <p class="text-xs text-slate-400">حساب سريع لطبع الأوراق بجميع الأنواع</p>
+        </div>
+       </div>
+       <div class="space-y-3">
+        <div>
+         <label class="text-xs text-slate-400 block mb-1">نوع الخدمة</label> <select id="svc-print-type" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 outline-none focus:border-emerald-500"> <option value="250">استنساخ أسود وأبيض (250 د.ع)</option> <option value="500">طباعة ملونة A4 (500 د.ع)</option> <option value="1000">طباعة صورة شمسية / معاملة (1,000 د.ع)</option> <option value="2500">سحب فايل / معاملات كاملة (2,500 د.ع)</option> </select>
+        </div>
+        <div>
+         <label class="text-xs text-slate-400 block mb-1">عدد الصفحات / النسخ</label> <input type="number" id="svc-print-count" value="1" min="1" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 font-bold outline-none focus:border-emerald-500">
+        </div>
+        <button onclick="recordServiceSale()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-lg shadow-emerald-600/20">إدخال العملية إلى مبيعات اليوم</button>
+       </div>
+      </div>
+      <!-- FIB / First Iraqi Bank Log -->
+      <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
+       <div class="flex items-center space-x-3 space-x-reverse">
+        <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl">
+         <i class="fa-solid fa-wallet text-2xl"></i>
+        </div>
+        <div>
+         <h3 class="font-bold text-lg text-white">سحب وإيداع FIB (First Iraqi Bank)</h3>
+         <p class="text-xs text-slate-400">تسجيل وعمولات الخدمات المالية الرقمية</p>
+        </div>
+       </div>
+       <div class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+         <div>
+          <label class="text-xs text-slate-400 block mb-1">نوع الحركة</label> <select id="fib-type" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 outline-none focus:border-amber-500"> <option value="deposit">تعبئة / إيداع</option> <option value="withdraw">سحب نقدي</option> </select>
+         </div>
+         <div>
+          <label class="text-xs text-slate-400 block mb-1">المبلغ (د.ع)</label> <input type="number" id="fib-amount" placeholder="50,000" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 font-bold outline-none focus:border-amber-500">
+         </div>
+        </div>
+        <div>
+         <label class="text-xs text-slate-400 block mb-1">عمولة المحل المستحصلة (د.ع)</label> <input type="number" id="fib-fee" value="1000" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 font-bold outline-none focus:border-amber-500">
+        </div>
+        <button onclick="recordFIBTransaction()" class="w-full py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl transition shadow-lg shadow-amber-600/20">تسجيل حركة FIB</button>
+       </div>
+      </div>
+     </div>
+    </section>
+    <!-- 4. DASHBOARD & REPORTS SECTION -->
+    <section id="sec-dashboard" class="hidden space-y-6">
+     <!-- Summary KPI Cards -->
+     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 flex items-center justify-between shadow-lg">
+       <div>
+        <p class="text-xs text-slate-400">إجمالي إيرادات اليوم</p>
+        <h3 id="dash-revenue" class="text-2xl font-black text-emerald-400 mt-1">0 د.ع</h3>
+       </div>
+       <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl">
+        <i class="fa-solid fa-money-bill-wave"></i>
+       </div>
+      </div>
+      <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 flex items-center justify-between shadow-lg">
+       <div>
+        <p class="text-xs text-slate-400">إجمالي عدد أصناف المواد</p>
+        <h3 id="dash-total-items" class="text-2xl font-black text-brand-400 mt-1">0 أصناف</h3>
+       </div>
+       <div class="w-12 h-12 rounded-xl bg-brand-500/10 text-brand-400 flex items-center justify-center text-xl">
+        <i class="fa-solid fa-boxes-packing"></i>
+       </div>
+      </div>
+      <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 flex items-center justify-between shadow-lg">
+       <div>
+        <p class="text-xs text-slate-400">عدد المبيعات اليومية</p>
+        <h3 id="dash-count" class="text-2xl font-black text-amber-400 mt-1">0</h3>
+       </div>
+       <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl">
+        <i class="fa-solid fa-receipt"></i>
+       </div>
+      </div>
+      <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 flex items-center justify-between shadow-lg">
+       <div>
+        <p class="text-xs text-slate-400">تنبيهات نواقص المخزون</p>
+        <h3 id="dash-low-stock" class="text-2xl font-black text-red-400 mt-1">0 أصناف</h3>
+       </div>
+       <div class="w-12 h-12 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center text-xl">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+       </div>
+      </div>
+     </div>
+     <!-- Recent Transactions History -->
+     <div class="bg-slate-950 rounded-2xl border border-slate-800 p-5 shadow-xl space-y-4">
+      <h3 class="font-bold text-lg text-white flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-brand-500"></i> سجل الفواتير والمعاملات الحديثة</h3>
+      <div class="overflow-x-auto">
+       <table class="w-full text-right border-collapse">
+        <thead>
+         <tr class="bg-slate-900 text-slate-400 text-xs border-b border-slate-800">
+          <th class="p-3">رقم الفاتورة</th>
+          <th class="p-3">الوقت</th>
+          <th class="p-3">عدد المواد</th>
+          <th class="p-3">المبلغ الإجمالي</th>
+          <th class="p-3">الخصم</th>
+          <th class="p-3 text-center">تفاصيل</th>
+         </tr>
+        </thead>
+        <tbody id="sales-history-tbody" class="divide-y divide-slate-800/60 text-sm">
+         <!-- Rendered JS -->
+        </tbody>
+       </table>
+      </div>
+     </div>
+    </section>
+   </div>
+  </main>
+  <!-- MODAL: AUDIO SETTINGS PANEL -->
+  <div id="modal-audio-settings" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+   <div class="bg-slate-950 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-5">
+    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+     <h3 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-sliders text-brand-500"></i> لوحة إعدادات الصوت والناطق</h3>
+     <button onclick="closeAudioSettingsModal()" class="text-slate-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="space-y-4">
+     <!-- Sound Effects Toggle -->
+     <div class="flex items-center justify-between p-3 bg-slate-900 rounded-xl border border-slate-800">
+      <div>
+       <p class="font-bold text-sm text-slate-200">المؤثرات الصوتية (SFX)</p>
+       <p class="text-xs text-slate-400">أصوات السكنر والكاشير والأزرار</p>
+      </div>
+      <label class="relative inline-flex items-center cursor-pointer"> <input type="checkbox" id="audio-sfx-toggle" onchange="toggleAudioSetting('sfx')" class="sr-only peer" checked> 
+       <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600"></div> </label>
+     </div>
+     <!-- Text to Speech Toggle -->
+     <div class="flex items-center justify-between p-3 bg-slate-900 rounded-xl border border-slate-800">
+      <div>
+       <p class="font-bold text-sm text-slate-200">الناطق الصوتي (TTS)</p>
+       <p class="text-xs text-slate-400">قراءة مجموع المبيعة عند إتمام الحساب</p>
+      </div>
+      <label class="relative inline-flex items-center cursor-pointer"> <input type="checkbox" id="audio-speech-toggle" onchange="toggleAudioSetting('speech')" class="sr-only peer" checked> 
+       <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div> </label>
+     </div>
+     <!-- Master Volume Slider -->
+     <div class="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-2">
+      <div class="flex justify-between items-center text-xs">
+       <span class="text-slate-300 font-bold">مستوى الصوت الإجمالي:</span> <span id="volume-val-label" class="text-brand-400 font-mono">80%</span>
+      </div>
+      <input type="range" id="audio-volume-slider" min="0" max="100" value="80" oninput="updateMasterVolume(this.value)" class="w-full accent-brand-500 cursor-pointer">
+     </div>
+     <!-- Test Sounds Buttons -->
+     <div class="pt-2">
+      <p class="text-xs text-slate-400 mb-2">تجربة الأصوات المباشرة:</p>
+      <div class="grid grid-cols-2 gap-2">
+       <button onclick="playAudioEffect('beep')" class="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 rounded-lg flex items-center justify-center gap-1.5"><i class="fa-solid fa-barcode text-brand-400"></i> صوت سكنر</button>
+       <button onclick="playAudioEffect('chime')" class="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 rounded-lg flex items-center justify-center gap-1.5"><i class="fa-solid fa-coins text-amber-400"></i> صوت الكاشير</button>
+       <button onclick="playAudioEffect('warning')" class="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 rounded-lg flex items-center justify-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-red-400"></i> صوت تحذير</button>
+       <button onclick="speakText('تم فحص الصوت بنجاح')" class="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 rounded-lg flex items-center justify-center gap-1.5"><i class="fa-solid fa-volume-high text-emerald-400"></i> تجربة الناطق</button>
+      </div>
+     </div>
+    </div>
+    <button onclick="closeAudioSettingsModal()" class="w-full py-3 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-xl transition">حفظ وإغلاق</button>
+   </div>
+  </div>
+  <!-- MODAL: ADD / EDIT PRODUCT -->
+  <div id="modal-product" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+   <div class="bg-slate-950 border border-slate-800 w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4">
+    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+     <h3 id="modal-title" class="text-lg font-bold text-white">إضافة منتج جديد</h3>
+     <button onclick="closeProductModal()" class="text-slate-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form id="product-form" onsubmit="saveProduct(event)" class="space-y-4">
+     <input type="hidden" id="prod-id">
+     <div>
+      <div class="flex justify-between items-center mb-1">
+       <label class="text-xs text-slate-400 block">رمز الباركود</label> <span id="scan-status-badge" class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded font-bold hidden">جاهز لمسح قارئ الباركود</span>
+      </div>
+      <div class="flex gap-2">
+       <div class="relative flex-1">
+        <input type="text" id="prod-barcode" required oninput="onBarcodeInputChange(this.value)" placeholder="امسح الباركود بالأجهزة أو ادخله يدويًا" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-100 font-mono text-sm outline-none focus:border-brand-500 pr-9"> <i class="fa-solid fa-barcode absolute right-3 top-3 text-slate-500"></i>
+       </div>
+       <button type="button" onclick="openCameraScanner('modal')" class="px-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-xl text-xs flex items-center gap-1"><i class="fa-solid fa-camera"></i> الكاميرا</button>
+       <button type="button" onclick="generateRandomBarcode()" class="px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs">توليد عشوائي</button>
+      </div>
+     </div>
+     <div>
+      <label class="text-xs text-slate-400 block mb-1">اسم المادة / الصنف</label> <input type="text" id="prod-name" required class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-100 text-sm outline-none focus:border-brand-500">
+     </div>
+     <div class="grid grid-cols-2 gap-3">
+      <div>
+       <label class="text-xs text-slate-400 block mb-1">القسم</label> <select id="prod-category" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-100 text-sm outline-none focus:border-brand-500"> <option value="Stationery">قرطاسية ومكتبية</option> <option value="Accessories">إكسسوارات هواتف</option> <option value="Services">خدمات وطباعة</option> </select>
+      </div>
+      <div>
+       <label class="text-xs text-slate-400 block mb-1">الكمية بالمخزن</label> <input type="number" id="prod-stock" value="10" min="0" required class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-100 text-sm outline-none focus:border-brand-500">
+      </div>
+     </div>
+     <div>
+      <label class="text-xs text-slate-400 block mb-1">سعر البيع للزبون (د.ع)</label> <input type="number" id="prod-price" value="1000" min="0" step="50" required class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-100 text-sm outline-none focus:border-brand-500">
+     </div>
+     <div class="pt-2 flex gap-2">
+      <button type="submit" class="flex-1 py-3 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-xl transition">حفظ البيانات</button>
+      <button type="button" onclick="closeProductModal()" class="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition">إلغاء</button>
+     </div>
+    </form>
+   </div>
+  </div>
+  <!-- MODAL: CAMERA SCANNER -->
+  <div id="modal-scanner" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center hidden p-4">
+   <div class="bg-slate-950 border border-slate-800 w-full max-w-md rounded-2xl p-5 space-y-4 text-center">
+    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+     <h3 class="font-bold text-white">ماسح الكاميرا للباركود</h3>
+     <button onclick="closeCameraScanner()" class="text-slate-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="reader" class="overflow-hidden rounded-xl bg-black border border-slate-800 min-h-[250px]"></div>
+    <p class="text-xs text-slate-400">وجه كاميرا الهاتف مباشرة نحو رمز الباركود</p>
+    <button onclick="closeCameraScanner()" class="w-full py-2.5 bg-slate-800 text-slate-200 font-bold rounded-xl">إغلاق الكاميرا</button>
+   </div>
+  </div>
+  <!-- HIDDEN THERMAL RECEIPT CONTAINER FOR PRINTING -->
+  <div id="printable-receipt" class="hidden">
+   <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
+    <h2 style="font-size: 18px; font-weight: bold; margin: 0;">پەرگەها کوردستان</h2>
+    <p style="font-size: 11px; margin: 2px 0;">قرطاسية - إكسسوارات - خدمات طباعة و FIB</p>
+    <p style="font-size: 10px; margin: 2px 0;" id="receipt-date"></p>
+    <p style="font-size: 10px; margin: 2px 0;" id="receipt-id"></p>
+   </div>
+   <table style="width: 100%; font-size: 11px; text-align: right; border-collapse: collapse;">
+    <thead>
+     <tr style="border-bottom: 1px solid #000;">
+      <th style="text-align: right;">المادة</th>
+      <th style="text-align: center;">العدد</th>
+      <th style="text-align: left;">المبلغ</th>
+     </tr>
+    </thead>
+    <tbody id="receipt-body">
+     <!-- JS Filled -->
+    </tbody>
+   </table>
+   <div style="border-top: 1px dashed #000; margin-top: 8px; padding-top: 6px; font-size: 12px;">
+    <div style="display: flex; justify-content: space-between;">
+     <span>المجموع:</span> <span id="receipt-subtotal"></span>
+    </div>
+    <div style="display: flex; justify-content: space-between;">
+     <span>الخصم:</span> <span id="receipt-discount"></span>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; margin-top: 4px;">
+     <span>الصافي المطلوب:</span> <span id="receipt-total"></span>
+    </div>
+   </div>
+   <div style="text-align: center; margin-top: 12px; font-size: 10px; border-top: 1px solid #000; padding-top: 6px;">شكراً لزيارتكم پەرگەها کوردستان!</div>
+  </div>
+  <!-- MAIN JAVASCRIPT APP LOGIC -->
+  <script src="js/app.js"></script>
+  <!-- SAVE DATA BUTTON LOGIC -->
+  <script>
+   function showSaveToast(msg, ok) {
+    var t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;padding:12px 20px;border-radius:12px;color:#fff;font-weight:700;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.4);background:' + (ok ? '#059669' : '#dc2626');
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 2500);
+   }
+   function saveAllData() {
+    try {
+     // 1) Ask the app to persist its own state if it exposes a save function
+     ['saveData', 'saveToStorage', 'saveState', 'persistData', 'saveProducts', 'saveSales'].forEach(function (fn) {
+      if (typeof window[fn] === 'function') { try { window[fn](); } catch (e) {} }
+     });
+     // 2) Download a full JSON backup of everything stored in the browser
+     var data = {};
+     for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      data[k] = localStorage.getItem(k);
+     }
+     var blob = new Blob([JSON.stringify({ savedAt: new Date().toISOString(), data: data }, null, 2)], { type: 'application/json' });
+     var a = document.createElement('a');
+     a.href = URL.createObjectURL(blob);
+     a.download = 'pargeha-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+     document.body.appendChild(a);
+     a.click();
+     a.remove();
+     URL.revokeObjectURL(a.href);
+     showSaveToast('تم حفظ البيانات بنجاح ✓', true);
+    } catch (e) {
+     showSaveToast('تعذر حفظ البيانات', false);
+    }
+   }
+   document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveAllData(); }
+   });
+  </script>
+ </body>
+</html>
